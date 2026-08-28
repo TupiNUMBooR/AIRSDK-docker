@@ -83,6 +83,7 @@ jobs:
           $compcHelpExitCode = $LASTEXITCODE
           Write-Host "compc help exit code: $compcHelpExitCode"
           if ($compcHelp -notmatch 'Adobe SWC Component Compiler|compc') { throw 'COMPc help output test failed' }
+          $global:LASTEXITCODE = 0
 
       - name: Tag and push image
         run: |
