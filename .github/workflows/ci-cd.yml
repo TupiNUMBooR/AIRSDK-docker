@@ -9,7 +9,7 @@ jobs:
     runs-on: windows-2022
 
     permissions:
-      contents: read
+      contents: write
       packages: write
 
     steps:
@@ -104,3 +104,15 @@ jobs:
             if ($LASTEXITCODE -ne 0) { throw 'Docker push failed' }
           }
         shell: pwsh
+
+      - name: Create or update GitHub release
+        uses: ncipollo/release-action@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ steps.sdk.outputs.version }}
+          commit: ${{ github.sha }}
+          name: AIR SDK ${{ steps.sdk.outputs.version }}
+          generateReleaseNotes: true
+          allowUpdates: true
+          removeArtifacts: true
+          replacesArtifacts: true
