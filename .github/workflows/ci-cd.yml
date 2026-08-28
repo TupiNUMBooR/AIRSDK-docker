@@ -7,9 +7,11 @@ jobs:
   docker:
     name: Build and push Docker image
     runs-on: windows-2022
+    outputs:
+      version: ${{ steps.sdk.outputs.version }}
 
     permissions:
-      contents: write
+      contents: read
       packages: write
 
     steps:
@@ -105,14 +107,22 @@ jobs:
           }
         shell: pwsh
 
+  release:
+    name: Create GitHub release
+    needs: docker
+    if: ${{ needs.docker.result == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
       - name: Create or update GitHub release
         uses: ncipollo/release-action@v1
-        if: ${{ success() }}
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          tag: ${{ steps.sdk.outputs.version }}
+          tag: ${{ needs.docker.outputs.version }}
           commit: ${{ github.sha }}
-          name: AIR SDK ${{ steps.sdk.outputs.version }}
+          name: AIR SDK ${{ needs.docker.outputs.version }}
           generateReleaseNotes: true
           allowUpdates: true
           removeArtifacts: true
