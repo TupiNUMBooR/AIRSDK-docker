@@ -81,8 +81,12 @@ jobs:
           docker run --rm --platform windows/amd64 "$image`:$version" adt.bat -version
           if ($LASTEXITCODE -ne 0) { throw 'ADT version test failed' }
           Write-Host "Running: docker run --rm --platform windows/amd64 $image`:$version compc.bat -help"
-          $compcHelp = (& docker run --rm --platform windows/amd64 "$image`:$version" compc.bat -help 2>&1 | Out-String)
+          $compcHelpLines = @(& docker run --rm --platform windows/amd64 "$image`:$version" compc.bat -help 2>&1 | ForEach-Object {
+            Write-Host $_
+            $_
+          })
           $compcHelpExitCode = $LASTEXITCODE
+          $compcHelp = $compcHelpLines -join "`n"
           Write-Host "compc help exit code: $compcHelpExitCode"
           if ($compcHelpExitCode -notin @(0, 1)) { throw "COMPc help command failed with exit code $compcHelpExitCode" }
           if ($compcHelp -notmatch 'Adobe SWC Component Compiler|compc') { throw 'COMPc help output test failed' }
