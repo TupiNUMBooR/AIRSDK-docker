@@ -21,7 +21,7 @@ Image check:
 
 ```powershell
 docker run --rm --platform windows/amd64 `
-	ghcr.io/tupinumboor/airsdk:latest `
+	ghcr.io/tupinumboor/airsdk-docker:latest `
 	adt.bat -version
 ```
 
@@ -30,7 +30,7 @@ Build a project from the current directory:
 ```powershell
 docker run --rm --platform windows/amd64 `
 	--volume "${PWD}:C:/workspace" `
-	ghcr.io/tupinumboor/airsdk:latest `
+	ghcr.io/tupinumboor/airsdk-docker:latest `
 	compc.bat --help
 ```
 

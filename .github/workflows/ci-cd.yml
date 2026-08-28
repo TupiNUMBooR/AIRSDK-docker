@@ -64,13 +64,29 @@ jobs:
             type=semver,pattern={{major}}.{{minor}},value=${{ steps.sdk.outputs.version }}
             type=semver,pattern={{major}},value=${{ steps.sdk.outputs.version }}
 
-      - name: Build and push
+      - name: Build image
         run: |
           $ErrorActionPreference = 'Stop'
           $image = '${{ steps.image.outputs.name }}'
           $version = '${{ steps.sdk.outputs.version }}'
           docker build --platform windows/amd64 --build-arg SDK_VERSION=$version --build-arg SDK_ARCHIVE=${{ steps.sdk.outputs.archive }} --label org.opencontainers.image.version=$version --tag "$image`:$version" .
           if ($LASTEXITCODE -ne 0) { throw 'Docker build failed' }
+
+      - name: Test image
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $image = '${{ steps.image.outputs.name }}'
+          $version = '${{ steps.sdk.outputs.version }}'
+          docker run --rm --platform windows/amd64 "$image`:$version" adt.bat -version
+          if ($LASTEXITCODE -ne 0) { throw 'ADT version test failed' }
+          docker run --rm --platform windows/amd64 "$image`:$version" compc.bat --help
+          if ($LASTEXITCODE -ne 0) { throw 'COMPc help test failed' }
+
+      - name: Tag and push image
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $image = '${{ steps.image.outputs.name }}'
+          $version = '${{ steps.sdk.outputs.version }}'
           '${{ steps.meta.outputs.tags }}' -split "`n" | Where-Object { $_.Trim() } | ForEach-Object {
             docker tag "$image`:$version" $_.Trim()
             if ($LASTEXITCODE -ne 0) { throw 'Docker tag failed' }
