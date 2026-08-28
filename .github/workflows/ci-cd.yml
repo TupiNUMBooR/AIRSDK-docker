@@ -77,8 +77,10 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $image = '${{ steps.image.outputs.name }}'
           $version = '${{ steps.sdk.outputs.version }}'
+          Write-Host "Running: docker run --rm --platform windows/amd64 $image`:$version adt.bat -version"
           docker run --rm --platform windows/amd64 "$image`:$version" adt.bat -version
           if ($LASTEXITCODE -ne 0) { throw 'ADT version test failed' }
+          Write-Host "Running: docker run --rm --platform windows/amd64 $image`:$version compc.bat -help"
           $compcHelp = (& docker run --rm --platform windows/amd64 "$image`:$version" compc.bat -help 2>&1 | Out-String)
           $compcHelpExitCode = $LASTEXITCODE
           Write-Host "compc help exit code: $compcHelpExitCode"
