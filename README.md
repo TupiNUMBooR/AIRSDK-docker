@@ -7,17 +7,17 @@
 ![Docker](https://img.shields.io/badge/docker-ghcr-blue?logo=docker)
 ![Windows Containers](https://img.shields.io/badge/containers-Windows-0078D6?logo=windows)
 
-Windows Docker-образ с Harman AIR SDK для сборки ActionScript 3-приложений под Windows и Android.
+Windows Docker image with Harman AIR SDK for building ActionScript 3 applications for Windows and Android.
 
 ## Usage
 
-Docker должен работать в режиме Windows containers.
+Docker must run in Windows container mode.
 
 ```powershell
 docker pull ghcr.io/tupinumboor/airsdk-docker:latest
 ```
 
-Проверка образа:
+Image check:
 
 ```powershell
 docker run --rm --platform windows/amd64 `
@@ -25,7 +25,7 @@ docker run --rm --platform windows/amd64 `
 	adt.bat -version
 ```
 
-Сборка проекта из текущей директории:
+Build a project from the current directory:
 
 ```powershell
 docker run --rm --platform windows/amd64 `
@@ -34,4 +34,4 @@ docker run --rm --platform windows/amd64 `
 	compc.bat --help
 ```
 
-Для упаковки приложения используйте `adt.bat`.
+Use `adt.bat` to package an application.
