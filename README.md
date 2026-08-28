@@ -31,7 +31,7 @@ Build a project from the current directory:
 docker run --rm --platform windows/amd64 `
 	--volume "${PWD}:C:/workspace" `
 	ghcr.io/tupinumboor/airsdk-docker:latest `
-	compc.bat --help
+	compc.bat -help
 ```
 
 Use `adt.bat` to package an application.
