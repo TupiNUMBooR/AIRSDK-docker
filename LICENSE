@@ -1,0 +1,28 @@
+AIR SDK Docker - Project License
+
+Copyright (c) 2026 TupiNUMBooR
+
+Permission is granted to use, copy, modify, merge, publish, distribute,
+sublicense, and sell the materials in this repository for any purpose,
+with or without attribution.
+
+The materials are provided "AS IS", without warranty of any kind. The
+project author is not responsible for any damage, claim, or support
+obligation arising from their use.
+
+Third-party components
+----------------------
+
+This license applies only to the original files and configuration in this
+repository. It does not grant rights to third-party components included in
+or downloaded by the image, including:
+
+- Harman AIR SDK
+- Android command-line tools and Android SDK packages
+- Java
+- 7-Zip
+- Windows Server Core
+
+Those components remain subject to their own licenses and terms. You are
+responsible for checking whether you may use, redistribute, or publish an
+image containing them.
