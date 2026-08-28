@@ -1,41 +1,37 @@
-# Сборщик AIR SDK
+# AIR SDK Docker
+
+![CI/CD](https://github.com/TupiNUMBooR/AIRSDK-docker/actions/workflows/ci-cd.yml/badge.svg)
+![Latest Release](https://img.shields.io/github/release/TupiNUMBooR/AIRSDK-docker)
+![Release Date](https://img.shields.io/github/release-date/TupiNUMBooR/AIRSDK-docker)
+
+![Docker](https://img.shields.io/badge/docker-ghcr-blue?logo=docker)
+![Windows Containers](https://img.shields.io/badge/containers-Windows-0078D6?logo=windows)
 
 Windows Docker-образ с Harman AIR SDK для сборки ActionScript 3-приложений под Windows и Android.
 
-## Настройки
+## Usage
 
-Файл `.env` должен содержать версию и архив SDK:
+Docker должен работать в режиме Windows containers.
 
-```env
-SDK_VERSION=51.3.4
-SDK_ARCHIVE=AIRSDK_51.3.4.7z
+```powershell
+docker pull ghcr.io/tupinumboor/airsdk-docker:latest
 ```
 
-Архив должен быть Windows-версией AIR SDK.
+Проверка образа:
 
-## Локальная сборка
-
-Docker должен работать в режиме Windows containers. Запустите из корня проекта:
-
-```bash
-docker compose build
+```powershell
+docker run --rm --platform windows/amd64 `
+	ghcr.io/tupinumboor/airsdk:latest `
+	adt.bat -version
 ```
 
-Compose автоматически загружает значения из `.env`, устанавливает Android SDK, распаковывает Windows AIR SDK и собирает образ `airsdk:${SDK_VERSION}`.
+Сборка проекта из текущей директории:
 
-Контейнер содержит `compc` и `adt`, поэтому внутри него можно собирать:
+```powershell
+docker run --rm --platform windows/amd64 `
+	--volume "${PWD}:C:/workspace" `
+	ghcr.io/tupinumboor/airsdk:latest `
+	compc.bat --help
+```
 
-- Windows native installer (`.exe`) через `adt -target native`;
-- Android package (`.apk`) через `adt -target apk`;
-- Android App Bundle (`.aab`) через `adt -target aab`.
-
-Для Android и Windows нужны соответствующие сертификаты подписи. Не добавляйте keystore в образ.
-
-## CI/CD
-
-При каждом `push` workflow собирает и отправляет образ в Gitea. Для workflow требуется секрет `REPO_TOKEN` со следующими разрешениями:
-
-- `read:repository` — checkout репозитория и скачивание архива;
-- `write:package` — публикация Docker-образа и привязка контейнерного пакета к репозиторию.
-
-SDK проприетарный, поэтому репозиторий и контейнерный пакет должны оставаться приватными.
+Для упаковки приложения используйте `adt.bat`.

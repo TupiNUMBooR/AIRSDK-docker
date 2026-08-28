@@ -14,7 +14,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           lfs: true
 
@@ -32,22 +32,31 @@ jobs:
 
       - name: Prepare image
         id: image
-        run: "name=ghcr.io/$($env:GITHUB_REPOSITORY.ToLower())" >> $env:GITHUB_OUTPUT
+        run: |
+          "name=ghcr.io/$($env:GITHUB_REPOSITORY.ToLower())" >> $env:GITHUB_OUTPUT
+        shell: pwsh
+
+      - name: Ensure Docker daemon
+        run: |
+          $dockerService = Get-Service -Name docker -ErrorAction SilentlyContinue
+          if (-not $dockerService) {
+            throw 'Docker service is not installed on the runner'
+          }
+          if ($dockerService.Status -ne 'Running') {
+            Start-Service -Name docker
+          }
         shell: pwsh
 
       - name: Log in to Docker registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
       - name: Docker metadata
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ steps.image.outputs.name }}
           tags: |
@@ -56,13 +65,16 @@ jobs:
             type=semver,pattern={{major}},value=${{ steps.sdk.outputs.version }}
 
       - name: Build and push
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./Dockerfile
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          build-args: |
-            SDK_VERSION=${{ steps.sdk.outputs.version }}
-            SDK_ARCHIVE=${{ steps.sdk.outputs.archive }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $image = '${{ steps.image.outputs.name }}'
+          $version = '${{ steps.sdk.outputs.version }}'
+          docker build --platform windows/amd64 --build-arg SDK_VERSION=$version --build-arg SDK_ARCHIVE=${{ steps.sdk.outputs.archive }} --label org.opencontainers.image.version=$version --tag "$image`:$version" .
+          if ($LASTEXITCODE -ne 0) { throw 'Docker build failed' }
+          '${{ steps.meta.outputs.tags }}' -split "`n" | Where-Object { $_.Trim() } | ForEach-Object {
+            docker tag "$image`:$version" $_.Trim()
+            if ($LASTEXITCODE -ne 0) { throw 'Docker tag failed' }
+            docker push $_.Trim()
+            if ($LASTEXITCODE -ne 0) { throw 'Docker push failed' }
+          }
+        shell: pwsh
