@@ -1,0 +1,10 @@
+# AIRSDK .dockerignore
+
+## IDE
+.vscode/
+.idea/
+.agents/
+.codex/
+
+## Git
+.git/

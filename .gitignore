@@ -1,0 +1,7 @@
+# AIRSDK .gitignore
+
+## IDE
+.vscode/
+.idea/
+.agents/
+.codex/
