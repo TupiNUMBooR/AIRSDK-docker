@@ -1,77 +1,75 @@
-# escape=`
-
-FROM mcr.microsoft.com/windows/servercore:ltsc2022
+FROM alpine:3.22 AS sdk-unpack
 
 ARG SDK_ARCHIVE
+
+RUN apk add --no-cache 7zip
+
+COPY ${SDK_ARCHIVE} /tmp/air-sdk.7z
+
+# Find bin/adt instead of assuming whether the archive has a top-level folder.
+RUN mkdir -p /tmp/air-sdk /opt/air-sdk \
+	&& 7zz x -y /tmp/air-sdk.7z -o/tmp/air-sdk >/dev/null \
+	&& adt_path="$(find /tmp/air-sdk -type f -path '*/bin/adt' -print -quit)" \
+	&& test -n "${adt_path}" \
+	&& sdk_root="$(dirname "$(dirname "${adt_path}")")" \
+	&& cp -a "${sdk_root}/." /opt/air-sdk/ \
+	&& find /opt/air-sdk/bin /opt/air-sdk/lib/android/bin -type f -exec chmod +x {} + \
+	&& rm -rf /tmp/air-sdk /tmp/air-sdk.7z
+
+FROM eclipse-temurin:17-jdk-jammy AS android-sdk
+
+ARG ANDROID_COMMAND_LINE_TOOLS_VERSION=11076708
+
+ENV ANDROID_SDK_ROOT=/opt/android-sdk \
+	ANDROID_HOME=/opt/android-sdk \
+	PATH=/opt/android-sdk/cmdline-tools/latest/bin:${PATH}
+
+RUN apt-get update \
+	&& apt-get install --yes --no-install-recommends unzip wget \
+	&& mkdir -p "${ANDROID_SDK_ROOT}/cmdline-tools" \
+	&& wget --quiet \
+		"https://dl.google.com/android/repository/commandlinetools-linux-${ANDROID_COMMAND_LINE_TOOLS_VERSION}_latest.zip" \
+		-O /tmp/android-tools.zip \
+	&& unzip -q /tmp/android-tools.zip -d "${ANDROID_SDK_ROOT}/cmdline-tools" \
+	&& mv "${ANDROID_SDK_ROOT}/cmdline-tools/cmdline-tools" "${ANDROID_SDK_ROOT}/cmdline-tools/latest" \
+	&& rm /tmp/android-tools.zip \
+	&& yes | sdkmanager --licenses >/dev/null \
+	&& sdkmanager --sdk_root="${ANDROID_SDK_ROOT}" \
+		"platform-tools" \
+		"platforms;android-34" \
+		"build-tools;34.0.0"
+
+FROM eclipse-temurin:17-jdk-jammy
+
 ARG SDK_VERSION
 
-SHELL ["powershell", "-NoLogo", "-Command", "$ErrorActionPreference = 'Stop'; $ProgressPreference = 'SilentlyContinue';"]
+ENV AIR_SDK_HOME=/opt/air-sdk \
+	AIR_HOME=/opt/air-sdk \
+	ANDROID_SDK_ROOT=/opt/android-sdk \
+	ANDROID_HOME=/opt/android-sdk \
+	SDK_VERSION=${SDK_VERSION} \
+	PATH=/opt/air-sdk/bin:/opt/android-sdk/platform-tools:/opt/android-sdk/cmdline-tools/latest/bin:${PATH}
 
-ENV JAVA_HOME=C:/java AIR_SDK_HOME=C:/air-sdk AIR_HOME=C:/air-sdk ANDROID_SDK_ROOT=C:/android-sdk ANDROID_HOME=C:/android-sdk SDK_VERSION=${SDK_VERSION} PATH=C:/java/bin;C:/air-sdk/bin;C:/android-sdk/platform-tools;C:/android-sdk/cmdline-tools/latest/bin;C:/Windows/System32/WindowsPowerShell/v1.0;C:/Windows/System32;C:/Windows
+COPY --from=sdk-unpack /opt/air-sdk/ /opt/air-sdk/
+COPY --from=android-sdk /opt/android-sdk/ /opt/android-sdk/
+COPY Dockerfile compose.yml README.md /app/meta/
 
-# Create the directories used by the SDK installations.
-RUN New-Item -ItemType Directory -Force C:/tools, C:/android-sdk, C:/java | Out-Null
+# Verify packaging and compilation before the image can be published.
+RUN test -x /opt/air-sdk/bin/compc \
+	&& test -f /opt/air-sdk/lib/compc-cli.jar \
+	&& test -x /opt/air-sdk/bin/adt \
+	&& mkdir -p /tmp/airsdk-smoke/src/smoke /tmp/airsdk-smoke/out \
+	&& printf '%s\n' \
+		'package smoke { public class Smoke { public function Smoke() {} } }' \
+		> /tmp/airsdk-smoke/src/smoke/Smoke.as \
+	&& compc \
+		-source-path /tmp/airsdk-smoke/src \
+		-include-sources /tmp/airsdk-smoke/src \
+		-output /tmp/airsdk-smoke/out/smoke.swc \
+	&& test -s /tmp/airsdk-smoke/out/smoke.swc \
+	&& adt -version \
+	&& rm -rf /tmp/airsdk-smoke
 
-# Download and install Java 17.
-RUN [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; `
-	Invoke-WebRequest -Uri https://api.adoptium.net/v3/binary/latest/17/ga/windows/x64/jdk/hotspot/normal/eclipse -OutFile C:/tools/jdk.zip; `
-	Expand-Archive C:/tools/jdk.zip C:/java; `
-	$jdkRoot = Get-ChildItem C:/java -Directory | Select-Object -First 1; `
-	if (-not $jdkRoot) { throw 'JDK installation failed' }; `
-	Copy-Item -Path (Join-Path $jdkRoot.FullName '*') -Destination C:/java -Recurse; `
-	Remove-Item -Recurse -Force $jdkRoot.FullName; `
-	Remove-Item C:/tools/jdk.zip
+WORKDIR /workspace
 
-# Install 7-Zip for unpacking the AIR SDK archive.
-RUN [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; `
-	Invoke-WebRequest -Uri https://www.7-zip.org/a/7z2408-x64.exe -OutFile C:/tools/7z.exe; `
-	Start-Process C:/tools/7z.exe -ArgumentList '/S' -Wait
-
-# Download and install the Android command-line tools.
-RUN [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; `
-	Invoke-WebRequest -Uri https://dl.google.com/android/repository/commandlinetools-win-11076708_latest.zip -OutFile C:/tools/android-tools.zip; `
-	Expand-Archive C:/tools/android-tools.zip C:/android-sdk/cmdline-tools; `
-	Rename-Item C:/android-sdk/cmdline-tools/cmdline-tools C:/android-sdk/cmdline-tools/latest; `
-	Remove-Item C:/tools/android-tools.zip
-
-# Accept Android SDK licenses non-interactively.
-RUN $env:JAVA_HOME = 'C:/java'; `
-	1..20 | ForEach-Object { 'y' } | & C:/android-sdk/cmdline-tools/latest/bin/sdkmanager.bat --licenses
-
-# Install the Android platform and build tools required by AIR.
-RUN $env:JAVA_HOME = 'C:/java'; `
-	& C:/android-sdk/cmdline-tools/latest/bin/sdkmanager.bat --sdk_root=C:/android-sdk 'platform-tools' 'platforms;android-34' 'build-tools;34.0.0'; `
-	Remove-Item -Recurse -Force C:/tools
-
-COPY ${SDK_ARCHIVE} C:/tmp/air-sdk.7z
-
-# Extract the Windows AIR SDK into its stable installation directory.
-RUN New-Item -ItemType Directory -Force C:/tmp/air-sdk-extracted, C:/air-sdk | Out-Null; `
-	& 'C:/Program Files/7-Zip/7z.exe' x -y C:/tmp/air-sdk.7z -oC:/tmp/air-sdk-extracted
-
-# Copy the archive contents while handling both archive layouts.
-RUN $sdkRoot = Get-ChildItem C:/tmp/air-sdk-extracted -Directory | Select-Object -First 1; `
-	if ($sdkRoot) { `
-		Copy-Item -Path (Join-Path $sdkRoot.FullName '*') -Destination C:/air-sdk -Recurse `
-	} else { `
-		Copy-Item -Path (Join-Path C:/tmp/air-sdk-extracted '*') -Destination C:/air-sdk -Recurse `
-	}; `
-	Remove-Item -Recurse -Force C:/tmp
-
-COPY Dockerfile compose.yml README.md C:/app/meta/
-
-# Verify the AIR SDK tools before creating the final image.
-RUN if (-not (Test-Path C:/air-sdk/bin/compc.bat)) { throw 'Windows AIR SDK compc.bat is missing' }; `
-	if (-not (Test-Path C:/air-sdk/bin/adt.bat)) { throw 'Windows AIR SDK adt.bat is missing' }; `
-	& C:/air-sdk/bin/adt.bat -version
-
-# Compile a minimal ActionScript project as an image smoke test.
-RUN New-Item -ItemType Directory -Force C:/tmp/airsdk-smoke/src/smoke, C:/tmp/airsdk-smoke/out | Out-Null; `
-	'package smoke { public class Smoke { public function Smoke() {} } }' | Set-Content C:/tmp/airsdk-smoke/src/smoke/Smoke.as; `
-	& C:/air-sdk/bin/compc.bat -source-path C:/tmp/airsdk-smoke/src -include-sources C:/tmp/airsdk-smoke/src -output C:/tmp/airsdk-smoke/out/smoke.swc; `
-	if (-not (Test-Path C:/tmp/airsdk-smoke/out/smoke.swc)) { throw 'AIR SDK smoke compilation failed' }; `
-	Remove-Item -Recurse -Force C:/tmp/airsdk-smoke
-
-WORKDIR C:/workspace
-
-CMD ["compc.bat"]
+CMD ["compc"]

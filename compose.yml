@@ -1,6 +1,6 @@
 services:
   airsdk:
-    platform: windows/amd64
+    platform: linux/amd64
     image: airsdk:${SDK_VERSION}
     build:
       context: .

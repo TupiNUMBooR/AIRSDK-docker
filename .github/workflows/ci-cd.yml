@@ -6,7 +6,7 @@ on:
 jobs:
   docker:
     name: Build and push Docker image
-    runs-on: windows-2022
+    runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.sdk.outputs.version }}
 
@@ -23,89 +23,56 @@ jobs:
       - name: Read SDK version
         id: sdk
         run: |
-          $settings = @{}
-          Get-Content .env | ForEach-Object {
-            $name, $value = $_ -split '=', 2
-            $settings[$name] = $value
-          }
-          "version=$($settings['SDK_VERSION'])" >> $env:GITHUB_OUTPUT
-          "archive=$($settings['SDK_ARCHIVE'])" >> $env:GITHUB_OUTPUT
-        shell: pwsh
+          set -a
+          . ./.env
+          set +a
+          echo "version=$SDK_VERSION" >> "$GITHUB_OUTPUT"
+          echo "archive=$SDK_ARCHIVE" >> "$GITHUB_OUTPUT"
 
       - name: Prepare image
         id: image
+        env:
+          REPOSITORY: ${{ github.repository }}
         run: |
-          "name=ghcr.io/$($env:GITHUB_REPOSITORY.ToLower())" >> $env:GITHUB_OUTPUT
-        shell: pwsh
+          echo "name=ghcr.io/${REPOSITORY,,}" >> "$GITHUB_OUTPUT"
 
-      - name: Ensure Docker daemon
-        run: |
-          $dockerService = Get-Service -Name docker -ErrorAction SilentlyContinue
-          if (-not $dockerService) {
-            throw 'Docker service is not installed on the runner'
-          }
-          if ($dockerService.Status -ne 'Running') {
-            Start-Service -Name docker
-          }
-        shell: pwsh
-
-      - name: Log in to Docker registry
+      - name: Log in to GitHub Container Registry
         uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
       - name: Docker metadata
         id: meta
         uses: docker/metadata-action@v6
         with:
           images: ${{ steps.image.outputs.name }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
           tags: |
+            type=raw,value=latest
             type=semver,pattern={{version}},value=${{ steps.sdk.outputs.version }}
             type=semver,pattern={{major}}.{{minor}},value=${{ steps.sdk.outputs.version }}
             type=semver,pattern={{major}},value=${{ steps.sdk.outputs.version }}
 
-      - name: Build image
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $image = '${{ steps.image.outputs.name }}'
-          $version = '${{ steps.sdk.outputs.version }}'
-          docker build --platform windows/amd64 --build-arg SDK_VERSION=$version --build-arg SDK_ARCHIVE=${{ steps.sdk.outputs.archive }} --label org.opencontainers.image.version=$version --tag "$image`:$version" .
-          if ($LASTEXITCODE -ne 0) { throw 'Docker build failed' }
-
-      - name: Test image
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $image = '${{ steps.image.outputs.name }}'
-          $version = '${{ steps.sdk.outputs.version }}'
-          Write-Host "Running: docker run --rm --platform windows/amd64 $image`:$version adt.bat -version"
-          docker run --rm --platform windows/amd64 "$image`:$version" adt.bat -version
-          if ($LASTEXITCODE -ne 0) { throw 'ADT version test failed' }
-          Write-Host "Running: docker run --rm --platform windows/amd64 $image`:$version compc.bat -help"
-          $compcHelpLines = @(& docker run --rm --platform windows/amd64 "$image`:$version" compc.bat -help 2>&1 | ForEach-Object {
-            Write-Host $_
-            $_
-          })
-          $compcHelpExitCode = $LASTEXITCODE
-          $compcHelp = $compcHelpLines -join "`n"
-          Write-Host "compc help exit code: $compcHelpExitCode"
-          if ($compcHelpExitCode -notin @(0, 1)) { throw "COMPc help command failed with exit code $compcHelpExitCode" }
-          if ($compcHelp -notmatch 'Adobe SWC Component Compiler|compc') { throw 'COMPc help output test failed' }
-          $global:LASTEXITCODE = 0
-
-      - name: Tag and push image
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $image = '${{ steps.image.outputs.name }}'
-          $version = '${{ steps.sdk.outputs.version }}'
-          '${{ steps.meta.outputs.tags }}' -split "`n" | Where-Object { $_.Trim() } | ForEach-Object {
-            docker tag "$image`:$version" $_.Trim()
-            if ($LASTEXITCODE -ne 0) { throw 'Docker tag failed' }
-            docker push $_.Trim()
-            if ($LASTEXITCODE -ne 0) { throw 'Docker push failed' }
-          }
-        shell: pwsh
+      - name: Build and push
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            SDK_VERSION=${{ steps.sdk.outputs.version }}
+            SDK_ARCHIVE=${{ steps.sdk.outputs.archive }}
 
   release:
     name: Create GitHub release
