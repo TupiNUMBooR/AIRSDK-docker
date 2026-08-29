@@ -42,3 +42,9 @@ docker run --rm --platform linux/amd64 \
 Use `adt` to package an Android APK or AAB.
 
 The image targets `linux/amd64`. Windows executables must be packaged with the image from the `windows` branch.
+
+### Included tools
+
+- `compc` — build `.swc`
+- `mxmlc` — build `.swf`
+- `adt` — package/sign `.apk` and `.aab`
