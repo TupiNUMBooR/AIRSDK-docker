@@ -40,10 +40,18 @@ ENV AIR_SDK_HOME=/opt/air-sdk \
 
 COPY --from=sdk-unpack /opt/air-sdk/ /opt/air-sdk/
 
+RUN cd /opt/air-sdk/lib/android/bin \
+	&& test -x aapt_linux64 \
+	&& test -x aapt2_linux64 \
+	&& test -x adb_linux64 \
+	&& ln -sf aapt_linux64 aapt \
+	&& ln -sf aapt2_linux64 aapt2 \
+	&& ln -sf adb_linux64 adb
+
 RUN apt-get update \
 	&& apt-get install --yes --no-install-recommends wget \
 	&& mkdir -p "${ANDROID_SDK_ROOT}/cmdline-tools" \
-	&& wget --quiet \
+	&& wget --no-verbose \
 		"https://dl.google.com/android/repository/commandlinetools-linux-${ANDROID_COMMAND_LINE_TOOLS_VERSION}_latest.zip" \
 		-O /tmp/android-tools.zip \
 	&& cd "${ANDROID_SDK_ROOT}/cmdline-tools" \
@@ -56,9 +64,6 @@ RUN apt-get update \
 		"platform-tools" \
 		"platforms;android-${ANDROID_PLATFORM_VERSION}" \
 		"build-tools;${ANDROID_BUILD_TOOLS_VERSION}" \
-	&& ln -sf "${ANDROID_SDK_ROOT}/platform-tools/adb" /opt/air-sdk/lib/android/bin/adb \
-	&& ln -sf "${ANDROID_SDK_ROOT}/build-tools/${ANDROID_BUILD_TOOLS_VERSION}/aapt" /opt/air-sdk/lib/android/bin/aapt \
-	&& ln -sf "${ANDROID_SDK_ROOT}/build-tools/${ANDROID_BUILD_TOOLS_VERSION}/aapt2" /opt/air-sdk/lib/android/bin/aapt2 \
 	&& apt-get purge --yes --auto-remove wget \
 	&& rm -rf /var/lib/apt/lists/*
 
@@ -76,7 +81,9 @@ RUN test -x /opt/air-sdk/bin/compc \
 	&& adt_version="$(adt -version)" \
 	&& printf '%s\n' "${adt_version}" \
 	&& printf '%s' "${adt_version}" | grep -Fq "${SDK_VERSION}" \
-	&& /opt/air-sdk/lib/android/bin/aapt version
+	&& /opt/air-sdk/lib/android/bin/aapt version \
+	&& /opt/air-sdk/lib/android/bin/aapt2 version \
+	&& /opt/air-sdk/lib/android/bin/adb version
 
 RUN mkdir -p out \
 	&& compc \
