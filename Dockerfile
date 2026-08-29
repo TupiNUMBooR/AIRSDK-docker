@@ -73,7 +73,9 @@ RUN test -x /opt/air-sdk/bin/compc \
 	&& test -x /opt/air-sdk/bin/mxmlc \
 	&& test -x /opt/air-sdk/bin/adt \
 	&& test -f /opt/air-sdk/lib/compc-cli.jar \
-	&& adt -version \
+	&& adt_version="$(adt -version)" \
+	&& printf '%s\n' "${adt_version}" \
+	&& printf '%s' "${adt_version}" | grep -Fq "${SDK_VERSION}" \
 	&& /opt/air-sdk/lib/android/bin/aapt version
 
 RUN mkdir -p out \

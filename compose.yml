@@ -4,7 +4,6 @@ services:
     image: airsdk:${SDK_VERSION}
     build:
       context: .
-      dockerfile: Dockerfile
       args:
         SDK_VERSION: ${SDK_VERSION}
         SDK_ARCHIVE: ${SDK_ARCHIVE}

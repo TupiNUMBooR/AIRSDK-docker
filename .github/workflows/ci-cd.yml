@@ -23,11 +23,12 @@ jobs:
       - name: Read SDK version
         id: sdk
         run: |
-          set -a
           . ./.env
-          set +a
           echo "version=$SDK_VERSION" >> "$GITHUB_OUTPUT"
           echo "archive=$SDK_ARCHIVE" >> "$GITHUB_OUTPUT"
+          echo "major=${SDK_VERSION%%.*}" >> "$GITHUB_OUTPUT"
+          version_tail=${SDK_VERSION#*.}
+          echo "minor=${SDK_VERSION%%.*}.${version_tail%%.*}" >> "$GITHUB_OUTPUT"
 
       - name: Prepare image
         id: image
@@ -55,15 +56,14 @@ jobs:
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
           tags: |
             type=raw,value=latest
-            type=semver,pattern={{version}},value=${{ steps.sdk.outputs.version }}
-            type=semver,pattern={{major}}.{{minor}},value=${{ steps.sdk.outputs.version }}
-            type=semver,pattern={{major}},value=${{ steps.sdk.outputs.version }}
+            type=raw,value=${{ steps.sdk.outputs.version }}
+            type=raw,value=${{ steps.sdk.outputs.minor }}
+            type=raw,value=${{ steps.sdk.outputs.major }}
 
       - name: Build and push
         uses: docker/build-push-action@v7
         with:
           context: .
-          file: ./Dockerfile
           platforms: linux/amd64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
@@ -77,7 +77,6 @@ jobs:
   release:
     name: Create GitHub release
     needs: docker
-    if: ${{ needs.docker.result == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -92,5 +91,3 @@ jobs:
           name: AIR SDK ${{ needs.docker.outputs.version }}
           generateReleaseNotes: true
           allowUpdates: true
-          removeArtifacts: true
-          replacesArtifacts: true
