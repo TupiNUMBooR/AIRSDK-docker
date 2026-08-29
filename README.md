@@ -14,14 +14,14 @@ Windows Docker image with Harman AIR SDK for building ActionScript 3 application
 Docker must run in Windows container mode.
 
 ```powershell
-docker pull ghcr.io/tupinumboor/airsdk-docker:latest
+docker pull ghcr.io/tupinumboor/airsdk-docker:51.3.4-windowsservercore-ltsc2022
 ```
 
 Image check:
 
 ```powershell
 docker run --rm --platform windows/amd64 `
-	ghcr.io/tupinumboor/airsdk-docker:latest `
+	ghcr.io/tupinumboor/airsdk-docker:51.3.4-windowsservercore-ltsc2022 `
 	adt.bat -version
 ```
 
@@ -30,7 +30,7 @@ Build a project from the current directory:
 ```powershell
 docker run --rm --platform windows/amd64 `
 	--volume "${PWD}:C:/workspace" `
-	ghcr.io/tupinumboor/airsdk-docker:latest `
+	ghcr.io/tupinumboor/airsdk-docker:51.3.4-windowsservercore-ltsc2022 `
 	compc.bat -help
 ```
 

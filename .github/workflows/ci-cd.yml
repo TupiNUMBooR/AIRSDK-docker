@@ -62,16 +62,17 @@ jobs:
         with:
           images: ${{ steps.image.outputs.name }}
           tags: |
-            type=semver,pattern={{version}},value=${{ steps.sdk.outputs.version }}
-            type=semver,pattern={{major}}.{{minor}},value=${{ steps.sdk.outputs.version }}
-            type=semver,pattern={{major}},value=${{ steps.sdk.outputs.version }}
+            type=semver,pattern={{version}}-windowsservercore-ltsc2022,value=${{ steps.sdk.outputs.version }}
+            type=semver,pattern={{major}}.{{minor}}-windowsservercore-ltsc2022,value=${{ steps.sdk.outputs.version }}
+            type=semver,pattern={{major}}-windowsservercore-ltsc2022,value=${{ steps.sdk.outputs.version }}
 
       - name: Build image
         run: |
           $ErrorActionPreference = 'Stop'
           $image = '${{ steps.image.outputs.name }}'
           $version = '${{ steps.sdk.outputs.version }}'
-          docker build --platform windows/amd64 --build-arg SDK_VERSION=$version --build-arg SDK_ARCHIVE=${{ steps.sdk.outputs.archive }} --label org.opencontainers.image.version=$version --tag "$image`:$version" .
+          $tag = "$version-windowsservercore-ltsc2022"
+          docker build --platform windows/amd64 --build-arg SDK_VERSION=$version --build-arg SDK_ARCHIVE=${{ steps.sdk.outputs.archive }} --label org.opencontainers.image.version=$version --label org.opencontainers.image.base.name=mcr.microsoft.com/windows/servercore:ltsc2022 --tag "$image`:$tag" .
           if ($LASTEXITCODE -ne 0) { throw 'Docker build failed' }
 
       - name: Test image
@@ -79,11 +80,12 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $image = '${{ steps.image.outputs.name }}'
           $version = '${{ steps.sdk.outputs.version }}'
-          Write-Host "Running: docker run --rm --platform windows/amd64 $image`:$version adt.bat -version"
-          docker run --rm --platform windows/amd64 "$image`:$version" adt.bat -version
+          $tag = "$version-windowsservercore-ltsc2022"
+          Write-Host "Running: docker run --rm --platform windows/amd64 $image`:$tag adt.bat -version"
+          docker run --rm --platform windows/amd64 "$image`:$tag" adt.bat -version
           if ($LASTEXITCODE -ne 0) { throw 'ADT version test failed' }
-          Write-Host "Running: docker run --rm --platform windows/amd64 $image`:$version compc.bat -help"
-          $compcHelpLines = @(& docker run --rm --platform windows/amd64 "$image`:$version" compc.bat -help 2>&1 | ForEach-Object {
+          Write-Host "Running: docker run --rm --platform windows/amd64 $image`:$tag compc.bat -help"
+          $compcHelpLines = @(& docker run --rm --platform windows/amd64 "$image`:$tag" compc.bat -help 2>&1 | ForEach-Object {
             Write-Host $_
             $_
           })
@@ -99,8 +101,9 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $image = '${{ steps.image.outputs.name }}'
           $version = '${{ steps.sdk.outputs.version }}'
+          $tag = "$version-windowsservercore-ltsc2022"
           '${{ steps.meta.outputs.tags }}' -split "`n" | Where-Object { $_.Trim() } | ForEach-Object {
-            docker tag "$image`:$version" $_.Trim()
+            docker tag "$image`:$tag" $_.Trim()
             if ($LASTEXITCODE -ne 0) { throw 'Docker tag failed' }
             docker push $_.Trim()
             if ($LASTEXITCODE -ne 0) { throw 'Docker push failed' }
