@@ -16,6 +16,12 @@ Every image build compiles a smoke-test SWC and SWF, then packages a signed capt
 docker pull ghcr.io/tupinumboor/airsdk-docker:latest
 ```
 
+or
+
+```bash
+docker compose build
+```
+
 Image check:
 
 ```bash
