@@ -5,7 +5,7 @@
 ![Release Date](https://img.shields.io/github/release-date/TupiNUMBooR/AIRSDK-docker)
 
 ![Top language](https://img.shields.io/github/languages/top/tupinumboor/AIRSDK-docker)
-![Docker](https://img.shields.io/badge/docker-ghcr-blue?logo=docker)
+[![Docker](https://img.shields.io/badge/docker-ghcr-blue?logo=docker)](https://github.com/TupiNUMBooR/AIRSDK-docker/pkgs/container/airsdk-docker)
 [![AIR SDK](https://img.shields.io/badge/AIR%20SDK-51.3.3.2-blue)](https://airsdk.harman.com/)
 
 Ubuntu Docker image with Harman AIR SDK for building ActionScript 3 applications and Android packages.
