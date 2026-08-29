@@ -8,43 +8,51 @@
 
 Ubuntu Docker image with Harman AIR SDK for building ActionScript 3 applications and Android packages.
 
-Every image build compiles a smoke-test SWC and SWF, then packages a signed captive-runtime APK.
-
 ## Usage
+
+Pull the image:
 
 ```bash
 docker pull ghcr.io/tupinumboor/airsdk-docker:latest
 ```
 
-or
+or build it locally:
 
 ```bash
 docker compose build
 ```
 
-Image check:
+Check the AIR SDK version:
 
 ```bash
-docker run --rm --platform linux/amd64 \
-	ghcr.io/tupinumboor/airsdk-docker:latest \
-	adt -version
+docker run --rm \
+    ghcr.io/tupinumboor/airsdk-docker:latest \
+    adt -version
 ```
 
-Build a project from the current directory:
+Build an SWC from the current directory:
 
 ```bash
-docker run --rm --platform linux/amd64 \
-	--volume "$PWD:/workspace" \
-	ghcr.io/tupinumboor/airsdk-docker:latest \
-	compc -help
+docker run --rm \
+    --volume "$PWD:/workspace" \
+    ghcr.io/tupinumboor/airsdk-docker:latest \
+    compc ...
 ```
 
-Use `adt` to package an Android APK or AAB.
+Build an SWF:
 
-The image targets `linux/amd64`. Windows executables must be packaged with the image from the `windows` branch.
+```bash
+docker run --rm \
+    --volume "$PWD:/workspace" \
+    ghcr.io/tupinumboor/airsdk-docker:latest \
+    mxmlc ...
+```
 
-### Included tools
+Package an APK or AAB:
 
-- `compc` — build `.swc`
-- `mxmlc` — build `.swf`
-- `adt` — package/sign `.apk` and `.aab`
+```bash
+docker run --rm \
+    --volume "$PWD:/workspace" \
+    ghcr.io/tupinumboor/airsdk-docker:latest \
+    adt -package ...
+```
