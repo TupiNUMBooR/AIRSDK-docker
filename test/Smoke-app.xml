@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<application xmlns="http://ns.adobe.com/air/application/51.3">
+	<id>smoke.Smoke</id>
+	<versionNumber>1.0.0</versionNumber>
+	<filename>Smoke</filename>
+	<name>Smoke</name>
+	<initialWindow>
+		<content>Smoke.swf</content>
+		<visible>true</visible>
+	</initialWindow>
+	<supportedProfiles>mobileDevice</supportedProfiles>
+</application>

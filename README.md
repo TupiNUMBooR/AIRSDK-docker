@@ -8,6 +8,8 @@
 
 Ubuntu Docker image with Harman AIR SDK for building ActionScript 3 applications and Android packages.
 
+Every image build compiles a smoke-test SWC and SWF, then packages a signed captive-runtime APK.
+
 ## Usage
 
 ```bash
